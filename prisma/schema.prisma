@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Мечта на 5 лет (одна запись)
+model DreamGoal {
+  id         Int      @id @default(autoincrement())
+  goalText   String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("dream_goal")
+}
+
+// Цели для периодов (неделя, месяц, квартал, полугодие, год)
+model PeriodGoals {
+  id          Int      @id @default(autoincrement())
+  periodType  String   // 'year', 'half_year', 'quarter', 'month', 'week'
+  periodStart DateTime
+  periodEnd   DateTime
+  goalsJson   String   // JSON массив строк
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("period_goals")
+}
+
+// Ежедневные записи (план и факт)
+model DailyEntry {
+  id        Int          @id @default(autoincrement())
+  date      DateTime     @unique
+  planText  String?
+  factText  String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  evaluation Evaluation?
+
+  @@map("daily_entries")
+}
+
+// Оценки от ИИ
+model Evaluation {
+  id                    Int        @id @default(autoincrement())
+  dailyEntryId          Int        @unique
+  strategyScore         Int        // 1-10
+  operationsScore       Int        // 1-10
+  teamScore             Int        // 1-10
+  efficiencyScore       Int        // 1-10
+  overallScore          Float      // 1-10
+  feedbackText          String
+  planVsFactText        String
+  alignmentDayWeek      String
+  alignmentWeekMonth    String
+  alignmentMonthQuarter String
+  alignmentQuarterHalf  String
+  alignmentHalfYear     String
+  alignmentYearDream    String
+  recommendationsText   String
+  createdAt             DateTime   @default(now())
+
+  dailyEntry DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+
+  @@map("evaluations")
+}
+
+// Незакрытые задачи
+model OpenTask {
+  id         Int       @id @default(autoincrement())
+  taskText   String
+  taskType   String    // 'strategic', 'operational'
+  originDate DateTime
+  isClosed   Boolean   @default(false)
+  closedAt   DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("open_tasks")
+}
