@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import AlignmentVisualization from '@/components/AlignmentVisualization'
 
 export default function DailyPage() {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -12,6 +13,15 @@ export default function DailyPage() {
   const [evaluating, setEvaluating] = useState(false)
   const [message, setMessage] = useState('')
   const [evaluation, setEvaluation] = useState<any>(null)
+
+  // Проверяем URL параметр при загрузке
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const dateParam = urlParams.get('date')
+    if (dateParam) {
+      setDate(dateParam)
+    }
+  }, [])
 
   useEffect(() => {
     loadDailyEntry()
@@ -249,6 +259,18 @@ export default function DailyPage() {
                 <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                   {evaluation.recommendationsText}
                 </p>
+              </div>
+
+              {/* Визуализация alignment */}
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <AlignmentVisualization
+                  alignmentDayWeek={evaluation.alignmentDayWeek}
+                  alignmentWeekMonth={evaluation.alignmentWeekMonth}
+                  alignmentMonthQuarter={evaluation.alignmentMonthQuarter}
+                  alignmentQuarterHalf={evaluation.alignmentQuarterHalf}
+                  alignmentHalfYear={evaluation.alignmentHalfYear}
+                  alignmentYearDream={evaluation.alignmentYearDream}
+                />
               </div>
             </div>
           </div>

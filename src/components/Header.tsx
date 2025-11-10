@@ -9,6 +9,8 @@ const navigation = [
   { name: 'Сегодня', href: '/daily' },
   { name: 'История', href: '/history' },
   { name: 'Аналитика', href: '/analytics' },
+  { name: 'Отчеты', href: '/reports' },
+  { name: 'Задачи', href: '/tasks' },
 ]
 
 export default function Header() {
