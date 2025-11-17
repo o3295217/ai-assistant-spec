@@ -77,6 +77,7 @@ export default function AnalyticsPage() {
     if (chartData.length < 2) return 'neutral'
     const firstScore = chartData[0]['Общая оценка']
     const lastScore = chartData[chartData.length - 1]['Общая оценка']
+    if (!firstScore || !lastScore) return 'neutral'
     if (lastScore > firstScore + 0.5) return 'up'
     if (lastScore < firstScore - 0.5) return 'down'
     return 'neutral'
