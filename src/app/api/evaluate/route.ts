@@ -5,6 +5,12 @@ import { getAllPeriods } from '@/lib/periods'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
+// Нормализация даты - устанавливаем полночь по UTC
+function normalizeDate(dateStr: string): Date {
+  const date = new Date(dateStr)
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0))
+}
+
 /**
  * POST /api/evaluate
  * Оценить день через Claude API
@@ -22,7 +28,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const date = new Date(dateStr)
+    const date = normalizeDate(dateStr)
 
     // Получаем запись за день
     const dailyEntry = await prisma.dailyEntry.findFirst({
@@ -105,9 +111,28 @@ export async function POST(request: NextRequest) {
 
     const evaluationData = parseClaudeResponse(content.text)
 
-    // Сохраняем оценку в БД
-    const evaluation = await prisma.evaluation.create({
-      data: {
+    // Сохраняем или обновляем оценку в БД (upsert для возможности пересчета)
+    const evaluation = await prisma.evaluation.upsert({
+      where: {
+        dailyEntryId: dailyEntry.id,
+      },
+      update: {
+        strategyScore: evaluationData.strategy_score,
+        operationsScore: evaluationData.operations_score,
+        teamScore: evaluationData.team_score,
+        efficiencyScore: evaluationData.efficiency_score,
+        overallScore: evaluationData.overall_score,
+        feedbackText: evaluationData.feedback,
+        planVsFactText: evaluationData.plan_vs_fact,
+        alignmentDayWeek: evaluationData.alignment.day_to_week,
+        alignmentWeekMonth: evaluationData.alignment.week_to_month,
+        alignmentMonthQuarter: evaluationData.alignment.month_to_quarter,
+        alignmentQuarterHalf: evaluationData.alignment.quarter_to_half,
+        alignmentHalfYear: evaluationData.alignment.half_to_year,
+        alignmentYearDream: evaluationData.alignment.year_to_dream,
+        recommendationsText: evaluationData.recommendations,
+      },
+      create: {
         dailyEntryId: dailyEntry.id,
         strategyScore: evaluationData.strategy_score,
         operationsScore: evaluationData.operations_score,

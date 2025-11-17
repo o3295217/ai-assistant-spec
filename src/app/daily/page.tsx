@@ -13,6 +13,9 @@ export default function DailyPage() {
   const [evaluating, setEvaluating] = useState(false)
   const [message, setMessage] = useState('')
   const [evaluation, setEvaluation] = useState<any>(null)
+  const [isEditingPlan, setIsEditingPlan] = useState(false)
+  const [isEditingFact, setIsEditingFact] = useState(false)
+  const [hasExistingData, setHasExistingData] = useState(false)
 
   // Проверяем URL параметр при загрузке
   useEffect(() => {
@@ -30,42 +33,44 @@ export default function DailyPage() {
   const loadDailyEntry = async () => {
     setLoading(true)
     setEvaluation(null)
+    setMessage('')
+    setHasExistingData(false)
+    setIsEditingPlan(false)
+    setIsEditingFact(false)
+    
     try {
       const res = await fetch(`/api/daily?date=${date}`)
       const data = await res.json()
 
       if (data.entry) {
-        // Если это не сегодняшняя дата и есть данные - спрашиваем подтверждение
-        const today = format(new Date(), 'yyyy-MM-dd')
         const hasData = data.entry.planText || data.entry.factText
-
-        if (date !== today && hasData) {
-          const shouldLoad = window.confirm(
-            `Найдены сохранённые данные за ${format(new Date(date), 'd MMMM yyyy', { locale: ru })}.\n\nПоказать эти данные?`
-          )
-
-          if (!shouldLoad) {
-            // Пользователь отказался - очищаем форму
-            setPlanText('')
-            setFactText('')
-            setLoading(false)
-            return
+        
+        if (hasData) {
+          setHasExistingData(true)
+          setPlanText(data.entry.planText || '')
+          setFactText(data.entry.factText || '')
+          
+          // Загружаем оценку если есть
+          if (data.entry.evaluation) {
+            setEvaluation(data.entry.evaluation)
           }
-        }
-
-        setPlanText(data.entry.planText || '')
-        setFactText(data.entry.factText || '')
-
-        // Загружаем оценку если есть
-        if (data.entry.evaluation) {
-          setEvaluation(data.entry.evaluation)
+        } else {
+          // Нет данных - режим создания
+          setPlanText('')
+          setFactText('')
+          setIsEditingPlan(true)
+          setIsEditingFact(true)
         }
       } else {
+        // Новый день - режим создания
         setPlanText('')
         setFactText('')
+        setIsEditingPlan(true)
+        setIsEditingFact(true)
       }
     } catch (error) {
       console.error('Error loading daily entry:', error)
+      setMessage('Ошибка при загрузке данных')
     } finally {
       setLoading(false)
     }
@@ -84,6 +89,8 @@ export default function DailyPage() {
         }),
       })
       setMessage('План сохранен!')
+      setIsEditingPlan(false)
+      setHasExistingData(true)
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
       console.error('Error saving plan:', error)
@@ -106,6 +113,8 @@ export default function DailyPage() {
         }),
       })
       setMessage('Факт сохранен!')
+      setIsEditingFact(false)
+      setHasExistingData(true)
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
       console.error('Error saving fact:', error)
@@ -115,9 +124,37 @@ export default function DailyPage() {
     }
   }
 
+  const enableEditPlan = () => {
+    setIsEditingPlan(true)
+    setMessage('')
+  }
+
+  const enableEditFact = () => {
+    setIsEditingFact(true)
+    setMessage('')
+  }
+
+  const cancelEditPlan = async () => {
+    setIsEditingPlan(false)
+    await loadDailyEntry() // Перезагружаем данные
+  }
+
+  const cancelEditFact = async () => {
+    setIsEditingFact(false)
+    await loadDailyEntry() // Перезагружаем данные
+  }
+
   const requestEvaluation = async () => {
     if (!planText || !factText) {
       setMessage('Необходимо заполнить и план, и факт')
+      return
+    }
+
+    const confirmMessage = evaluation 
+      ? 'Уже есть оценка для этого дня. Пересчитать оценку заново?' 
+      : 'Отправить данные на оценку ИИ?'
+    
+    if (!window.confirm(confirmMessage)) {
       return
     }
 
@@ -149,70 +186,164 @@ export default function DailyPage() {
 
   const dateFormatted = format(new Date(date), 'dd MMMM yyyy, EEEE', { locale: ru })
 
+  const getStatus = () => {
+    if (evaluation) return { text: '✅ Оценен', color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' }
+    if (planText && factText) return { text: '⏳ Ожидает оценки', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' }
+    if (planText) return { text: '📝 Есть план', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' }
+    return { text: '🆕 Новый день', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400' }
+  }
+
+  const status = getStatus()
+
   return (
     <main className="min-h-screen p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Планирование дня</h1>
 
         {/* Выбор даты */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-2">Дата</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-          />
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {dateFormatted}
-          </p>
+        <div className="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Дата</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+              />
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {dateFormatted}
+              </p>
+            </div>
+            
+            <div className={`px-4 py-2 rounded-lg font-semibold ${status.color}`}>
+              {status.text}
+            </div>
+          </div>
         </div>
 
         {/* План на день */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">План на день</h2>
-          <textarea
-            value={planText}
-            onChange={(e) => setPlanText(e.target.value)}
-            rows={8}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            placeholder="Введите план на день..."
-          />
-          <button
-            onClick={savePlan}
-            disabled={loading}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            Сохранить план
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">План на день</h2>
+            {hasExistingData && !isEditingPlan && (
+              <button
+                onClick={enableEditPlan}
+                className="px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
+              >
+                ✏️ Редактировать
+              </button>
+            )}
+          </div>
+          
+          {isEditingPlan ? (
+            <>
+              <textarea
+                value={planText}
+                onChange={(e) => setPlanText(e.target.value)}
+                rows={8}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Введите план на день..."
+              />
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={savePlan}
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {hasExistingData ? 'Сохранить изменения' : 'Сохранить план'}
+                </button>
+                {hasExistingData && (
+                  <button
+                    onClick={cancelEditPlan}
+                    disabled={loading}
+                    className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50"
+                  >
+                    Отменить
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md whitespace-pre-wrap">
+              {planText || <span className="text-gray-400">План не заполнен</span>}
+            </div>
+          )}
         </div>
 
         {/* Факт выполнения */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Факт выполнения</h2>
-          <textarea
-            value={factText}
-            onChange={(e) => setFactText(e.target.value)}
-            rows={8}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-            placeholder="Что реально сделали за день..."
-          />
-          <div className="mt-4 flex gap-4">
-            <button
-              onClick={saveFact}
-              disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-            >
-              Сохранить факт
-            </button>
-            <button
-              onClick={requestEvaluation}
-              disabled={evaluating || !planText || !factText}
-              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-            >
-              {evaluating ? 'Получение оценки...' : 'Получить оценку от ИИ'}
-            </button>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Факт выполнения</h2>
+            {hasExistingData && !isEditingFact && (
+              <button
+                onClick={enableEditFact}
+                className="px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
+              >
+                ✏️ Редактировать
+              </button>
+            )}
           </div>
+          
+          {isEditingFact ? (
+            <>
+              <textarea
+                value={factText}
+                onChange={(e) => setFactText(e.target.value)}
+                rows={8}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                placeholder="Что реально сделали за день..."
+              />
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={saveFact}
+                  disabled={loading}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {hasExistingData ? 'Сохранить изменения' : 'Сохранить факт'}
+                </button>
+                {hasExistingData && (
+                  <button
+                    onClick={cancelEditFact}
+                    disabled={loading}
+                    className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50"
+                  >
+                    Отменить
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md whitespace-pre-wrap">
+              {factText || <span className="text-gray-400">Факт не заполнен</span>}
+            </div>
+          )}
+          
+          {/* Кнопка получения оценки */}
+          {!isEditingFact && !isEditingPlan && planText && factText && (
+            <div className="mt-4">
+              <button
+                onClick={requestEvaluation}
+                disabled={evaluating}
+                className={`px-6 py-2 rounded-md font-semibold transition ${
+                  evaluation
+                    ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
+                } disabled:opacity-50`}
+              >
+                {evaluating 
+                  ? '⏳ Получение оценки...' 
+                  : evaluation 
+                    ? '🔄 Пересчитать оценку' 
+                    : '🎯 Получить оценку от ИИ'}
+              </button>
+              {!evaluation && (
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  💡 План и факт заполнены. Нажмите кнопку для получения оценки от Claude AI
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Сообщения */}

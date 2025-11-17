@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { startOfDay, endOfDay } from 'date-fns'
+
+// Нормализация даты - устанавливаем полночь по UTC
+function normalizeDate(dateStr: string): Date {
+  const date = new Date(dateStr)
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0))
+}
 
 /**
  * GET /api/daily?date=2025-11-09
@@ -18,7 +23,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const date = startOfDay(new Date(dateStr))
+    const date = normalizeDate(dateStr)
 
     const entry = await prisma.dailyEntry.findFirst({
       where: { date },
@@ -54,7 +59,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const date = startOfDay(new Date(dateStr))
+    const date = normalizeDate(dateStr)
 
     // Проверяем существующую запись
     const existing = await prisma.dailyEntry.findFirst({
