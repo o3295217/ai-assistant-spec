@@ -35,6 +35,24 @@ export default function DailyPage() {
       const data = await res.json()
 
       if (data.entry) {
+        // Если это не сегодняшняя дата и есть данные - спрашиваем подтверждение
+        const today = format(new Date(), 'yyyy-MM-dd')
+        const hasData = data.entry.planText || data.entry.factText
+
+        if (date !== today && hasData) {
+          const shouldLoad = window.confirm(
+            `Найдены сохранённые данные за ${format(new Date(date), 'd MMMM yyyy', { locale: ru })}.\n\nПоказать эти данные?`
+          )
+
+          if (!shouldLoad) {
+            // Пользователь отказался - очищаем форму
+            setPlanText('')
+            setFactText('')
+            setLoading(false)
+            return
+          }
+        }
+
         setPlanText(data.entry.planText || '')
         setFactText(data.entry.factText || '')
 
