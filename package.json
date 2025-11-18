@@ -12,6 +12,11 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:performance": "playwright test tests/performance",
+    "test:all": "npm test && npm run test:e2e",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
@@ -26,9 +31,11 @@
     "recharts": "^2.10.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",
     "@testing-library/react-hooks": "^8.0.1",
+    "@testing-library/user-event": "^14.5.1",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",

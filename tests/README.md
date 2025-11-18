@@ -2,12 +2,21 @@
 
 ## Overview
 
-This test suite provides comprehensive coverage for the Personal AI Effectiveness Assistant application, focusing on Phase 1 (Critical) testing requirements:
+This test suite provides comprehensive coverage for the Personal AI Effectiveness Assistant application across all testing phases:
 
+**Phase 1 (Critical) - COMPLETED:**
 - ✅ API route tests
 - ✅ Claude API integration tests
 - ✅ Database layer tests
 - ✅ Business logic tests
+
+**Phase 3 (Medium) - COMPLETED:**
+- ✅ Component tests for all major pages
+- ✅ E2E tests for critical user journeys
+
+**Phase 4 (Low) - COMPLETED:**
+- ✅ Performance tests for database and pages
+- ✅ Extended E2E scenarios
 
 ## Test Structure
 
@@ -17,7 +26,7 @@ tests/
 ├── utils/
 │   ├── mockData.ts              # Mock data for all tests
 │   └── testHelpers.ts           # Helper functions and utilities
-├── api/
+├── api/                         # Phase 1: API route tests
 │   ├── goals/
 │   │   ├── dream.test.ts        # Dream goal endpoints
 │   │   └── period.test.ts       # Period goals endpoints
@@ -29,8 +38,21 @@ tests/
 │   │   └── openTasks.test.ts    # Open tasks endpoints
 │   └── analytics/
 │       └── analytics.test.ts    # Analytics endpoints
-└── integration/
-    └── claudeAPI.test.ts        # Claude API integration
+├── integration/                 # Phase 1: Critical integrations
+│   └── claudeAPI.test.ts        # Claude API integration
+├── components/                  # Phase 3: Component tests
+│   ├── Dashboard.test.tsx       # Dashboard page component
+│   ├── GoalsPage.test.tsx       # Goals management page
+│   ├── DailyPlanning.test.tsx   # Daily planning page
+│   └── EvaluationDisplay.test.tsx # Evaluation display page
+├── e2e/                         # Phase 3 & 4: End-to-end tests
+│   ├── daily-workflow.spec.ts   # Complete daily workflow
+│   ├── goal-hierarchy.spec.ts   # Goal setup journey
+│   ├── analytics.spec.ts        # Analytics and history
+│   └── extended-scenarios.spec.ts # Complex scenarios
+└── performance/                 # Phase 4: Performance tests
+    ├── database.test.ts         # Database query performance
+    └── page-load.spec.ts        # Page load performance
 ```
 
 ## Running Tests
@@ -38,27 +60,43 @@ tests/
 ### Install Dependencies
 
 ```bash
+# Jest and Testing Library (Phase 1)
 npm install --save-dev jest @types/jest ts-jest @testing-library/jest-dom
 npm install --save-dev @testing-library/react @testing-library/react-hooks
+npm install --save-dev @testing-library/user-event
+
+# Playwright for E2E tests (Phase 3 & 4)
+npm install --save-dev @playwright/test
+npx playwright install
 ```
 
 ### Run All Tests
 
 ```bash
+# Run all unit and integration tests (Jest)
 npm test
+
+# Run all E2E tests (Playwright)
+npm run test:e2e
+
+# Run all tests (Jest + Playwright)
+npm run test:all
 ```
 
 ### Run Specific Test Suite
 
 ```bash
-# Run only API tests
-npm test -- tests/api
+# Jest tests
+npm test -- tests/api                    # API tests only
+npm test -- tests/components             # Component tests only
+npm test -- tests/integration/claudeAPI  # Claude API tests
+npm test -- tests/performance            # Performance tests
 
-# Run only Claude API tests
-npm test -- tests/integration/claudeAPI
-
-# Run specific file
-npm test -- tests/api/goals/dream.test.ts
+# Playwright E2E tests
+npx playwright test tests/e2e/daily-workflow.spec.ts
+npx playwright test tests/e2e/goal-hierarchy.spec.ts
+npx playwright test tests/e2e/analytics.spec.ts
+npx playwright test tests/e2e/extended-scenarios.spec.ts
 ```
 
 ### Run with Coverage
@@ -70,7 +108,21 @@ npm test -- --coverage
 ### Watch Mode (for development)
 
 ```bash
+# Jest watch mode
 npm test -- --watch
+
+# Playwright UI mode
+npx playwright test --ui
+```
+
+### Run Performance Tests
+
+```bash
+# Database performance
+npm test -- tests/performance/database.test.ts
+
+# Page load performance
+npx playwright test tests/performance/page-load.spec.ts
 ```
 
 ## Test Coverage Goals
@@ -78,8 +130,10 @@ npm test -- --watch
 | Category | Target | Description |
 |----------|--------|-------------|
 | **Unit Tests** | 80%+ | Individual functions and components |
+| **Component Tests** | 75%+ | React components and UI |
 | **Integration Tests** | 100% | All API endpoints |
-| **Critical Paths** | 100% | Claude API, evaluations, data persistence |
+| **E2E Tests** | 100% | Critical user journeys |
+| **Performance Tests** | 100% | DB queries, page loads |
 | **Overall** | 75%+ | Total code coverage |
 
 ## Key Test Areas
@@ -159,6 +213,141 @@ npm test -- --watch
 - ✅ Alignment status extraction
 - ✅ Error scenarios (malformed JSON, network errors, rate limiting)
 - ✅ Database schema mapping
+
+## Phase 3: Component & E2E Tests
+
+### 7. Component Tests
+
+**Files:**
+- `tests/components/Dashboard.test.tsx`
+- `tests/components/GoalsPage.test.tsx`
+- `tests/components/DailyPlanning.test.tsx`
+- `tests/components/EvaluationDisplay.test.tsx`
+
+**Coverage:**
+- ✅ Dashboard rendering and interactions
+- ✅ Goal hierarchy widget (expand/collapse)
+- ✅ Evaluation graph display
+- ✅ Goals page with all 6 tabs
+- ✅ Goal CRUD operations
+- ✅ Daily planning form validation
+- ✅ Plan/fact input with auto-save
+- ✅ Context goals display
+- ✅ Evaluation score visualization
+- ✅ Alignment chain display with color coding
+- ✅ Loading and error states
+- ✅ Responsive design
+- ✅ Accessibility (ARIA, keyboard navigation)
+
+### 8. E2E Tests - Critical Paths
+
+**File:** `tests/e2e/daily-workflow.spec.ts`
+
+**Coverage:**
+- ✅ Complete daily workflow: plan → fact → evaluate → view results
+- ✅ Validation preventing evaluation without plan/fact
+- ✅ Claude API timeout handling
+- ✅ Editing plan after creation
+- ✅ Context goals during planning
+- ✅ Auto-save functionality
+- ✅ Navigation between days
+- ✅ Alignment details interaction
+- ✅ Error handling and edge cases
+
+**File:** `tests/e2e/goal-hierarchy.spec.ts`
+
+**Coverage:**
+- ✅ Complete goal hierarchy setup (dream → year → ... → week)
+- ✅ Period date auto-calculation
+- ✅ Individual goal editing and deletion
+- ✅ Goal validation
+- ✅ Unsaved changes preservation
+- ✅ Keyboard shortcuts
+- ✅ First-time user onboarding
+
+**File:** `tests/e2e/analytics.spec.ts`
+
+**Coverage:**
+- ✅ Trend graph with different periods (30/60/90 days)
+- ✅ History calendar view
+- ✅ Date range filtering
+- ✅ Weekly report generation
+- ✅ Navigation between weeks
+- ✅ Trend statistics and indicators
+- ✅ Graph data point interaction
+- ✅ Report export to PDF
+- ✅ Open tasks management
+- ✅ Task filtering and closing
+
+## Phase 4: Performance & Extended Tests
+
+### 9. Database Performance Tests
+
+**File:** `tests/performance/database.test.ts`
+
+**Coverage:**
+- ✅ Read operations < 100ms
+  - Fetch dream goal
+  - Fetch daily entry by date
+  - Fetch entry with evaluation
+  - Fetch period goals
+  - Fetch entries in date range
+  - Fetch open tasks filtered
+  - Fetch last 30 days
+- ✅ Write operations < 100ms
+  - Create/update dream goal
+  - Create/update daily entry
+  - Create evaluation
+  - Close open task
+- ✅ Complex queries < 100ms
+  - Fetch all data for evaluation prompt
+  - Aggregate weekly statistics
+  - Cascade delete operations
+- ✅ Bulk operations performance
+- ✅ Index performance validation
+
+### 10. Page Load Performance Tests
+
+**File:** `tests/performance/page-load.spec.ts`
+
+**Coverage:**
+- ✅ All pages load < 1 second
+  - Dashboard
+  - Goals page
+  - Daily planning
+  - Evaluation page
+  - Analytics
+  - History
+  - Tasks
+  - Weekly report
+- ✅ Time to Interactive < 1 second
+- ✅ First Contentful Paint < 500ms
+- ✅ Resource loading optimization
+- ✅ Chart rendering performance
+- ✅ Navigation performance
+- ✅ Mobile performance
+- ✅ Memory usage monitoring
+- ✅ Claude API 30s timeout compliance
+
+### 11. Extended E2E Scenarios
+
+**File:** `tests/e2e/extended-scenarios.spec.ts`
+
+**Coverage:**
+- ✅ Multi-day workflow (5+ days)
+- ✅ Open tasks tracking across days
+- ✅ Goal evolution and alignment changes
+- ✅ Data export and backup
+- ✅ Print functionality
+- ✅ Offline behavior
+- ✅ Save queuing when offline
+- ✅ Complete keyboard-only workflow
+- ✅ Screen reader announcements
+- ✅ Edge cases:
+  - Very long text (5000+ chars)
+  - Special characters and emojis
+  - Concurrent saves
+  - Date boundary cases (year end, leap year)
 
 ## Test Data
 
