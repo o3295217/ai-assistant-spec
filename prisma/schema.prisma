@@ -1,0 +1,93 @@
+// Prisma Schema for Personal AI Effectiveness Assistant
+// Based on specification in ai-assistant-spec.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Table: dream_goal
+// Stores the user's 5-year dream goal
+model DreamGoal {
+  id         Int      @id @default(autoincrement())
+  goalText   String   @map("goal_text")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("dream_goal")
+}
+
+// Table: period_goals
+// Stores goals for different time periods (year, half_year, quarter, month, week)
+model PeriodGoal {
+  id          Int      @id @default(autoincrement())
+  periodType  String   @map("period_type") // 'year', 'half_year', 'quarter', 'month', 'week'
+  periodStart DateTime @map("period_start")
+  periodEnd   DateTime @map("period_end")
+  goalsJson   String   @map("goals_json") // JSON array of goal strings
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("period_goals")
+}
+
+// Table: daily_entries
+// Stores daily plan and fact
+model DailyEntry {
+  id         Int          @id @default(autoincrement())
+  date       DateTime     @unique
+  planText   String?      @map("plan_text")
+  factText   String?      @map("fact_text")
+  createdAt  DateTime     @default(now()) @map("created_at")
+  updatedAt  DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  evaluation Evaluation?
+
+  @@map("daily_entries")
+}
+
+// Table: evaluations
+// Stores AI evaluations for daily entries
+model Evaluation {
+  id                    Int        @id @default(autoincrement())
+  dailyEntryId          Int        @unique @map("daily_entry_id")
+  strategyScore         Int        @map("strategy_score") // 1-10
+  operationsScore       Int        @map("operations_score") // 1-10
+  teamScore             Int        @map("team_score") // 1-10
+  efficiencyScore       Int        @map("efficiency_score") // 1-10
+  overallScore          Float      @map("overall_score") // 1-10 with 0.5 increments
+  feedbackText          String     @map("feedback_text")
+  planVsFactText        String     @map("plan_vs_fact_text")
+  alignmentDayWeek      String     @map("alignment_day_week") // 'works', 'partial', 'no'
+  alignmentWeekMonth    String     @map("alignment_week_month")
+  alignmentMonthQuarter String     @map("alignment_month_quarter")
+  alignmentQuarterHalf  String     @map("alignment_quarter_half")
+  alignmentHalfYear     String     @map("alignment_half_year")
+  alignmentYearDream    String     @map("alignment_year_dream")
+  recommendationsText   String     @map("recommendations_text")
+  createdAt             DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  dailyEntry            DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+
+  @@map("evaluations")
+}
+
+// Table: open_tasks
+// Stores tasks that were planned but not completed
+model OpenTask {
+  id         Int       @id @default(autoincrement())
+  taskText   String    @map("task_text")
+  taskType   String    @map("task_type") // 'strategic' or 'operational'
+  originDate DateTime  @map("origin_date")
+  isClosed   Boolean   @default(false) @map("is_closed")
+  closedAt   DateTime? @map("closed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@map("open_tasks")
+}
