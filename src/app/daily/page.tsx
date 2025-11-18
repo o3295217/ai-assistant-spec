@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import AlignmentVisualization from '@/components/AlignmentVisualization'
+import { ProgressBar } from '@/components/ui/ProgressBar'
+import { Button } from '@/components/ui/Button'
+import { useAutosave } from '@/hooks/useAutosave'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 export default function DailyPage() {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -17,12 +21,54 @@ export default function DailyPage() {
   const [isEditingFact, setIsEditingFact] = useState(false)
   const [hasExistingData, setHasExistingData] = useState(false)
 
+  // Автосохранение черновиков
+  const { loadDraft: loadPlanDraft, clearDraft: clearPlanDraft } = useAutosave(`plan_${date}`, planText)
+  const { loadDraft: loadFactDraft, clearDraft: clearFactDraft } = useAutosave(`fact_${date}`, factText)
+
+  // Горячие клавиши
+  useKeyboardShortcuts([
+    {
+      key: 's',
+      ctrl: true,
+      callback: () => {
+        if (isEditingPlan && planText) savePlan()
+        else if (isEditingFact && factText) saveFact()
+      },
+      description: 'Сохранить план/факт'
+    },
+    {
+      key: 'e',
+      ctrl: true,
+      callback: () => {
+        if (hasExistingData && planText && factText && !evaluating) {
+          evaluateDay()
+        }
+      },
+      description: 'Получить оценку'
+    }
+  ])
+
   // Проверяем URL параметр при загрузке
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const dateParam = urlParams.get('date')
     if (dateParam) {
       setDate(dateParam)
+    }
+  }, [])
+
+  // Восстанавливаем черновики при первой загрузке
+  useEffect(() => {
+    const savedPlan = loadPlanDraft()
+    const savedFact = loadFactDraft()
+    
+    if (savedPlan && !planText) {
+      setPlanText(savedPlan)
+      setMessage('Восстановлен сохранённый черновик плана')
+    }
+    if (savedFact && !factText) {
+      setFactText(savedFact)
+      setMessage('Восстановлен сохранённый черновик факта')
     }
   }, [])
 
@@ -91,6 +137,7 @@ export default function DailyPage() {
       setMessage('План сохранен!')
       setIsEditingPlan(false)
       setHasExistingData(true)
+      clearPlanDraft() // Очистить черновик после успешного сохранения
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
       console.error('Error saving plan:', error)
@@ -115,6 +162,7 @@ export default function DailyPage() {
       setMessage('Факт сохранен!')
       setIsEditingFact(false)
       setHasExistingData(true)
+      clearFactDraft() // Очистить черновик после успешного сохранения
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
       console.error('Error saving fact:', error)
@@ -144,7 +192,7 @@ export default function DailyPage() {
     await loadDailyEntry() // Перезагружаем данные
   }
 
-  const requestEvaluation = async () => {
+  const evaluateDay = async () => {
     if (!planText || !factText) {
       setMessage('Необходимо заполнить и план, и факт')
       return
@@ -196,22 +244,25 @@ export default function DailyPage() {
   const status = getStatus()
 
   return (
-    <main className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Планирование дня</h1>
+    <>
+      <ProgressBar show={evaluating} message="⏳ Получение оценки от Claude AI..." />
+      
+      <main className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-4xl font-semibold mb-8 text-gray-900 dark:text-white tracking-tight">Планирование дня</h1>
 
         {/* Выбор даты */}
-        <div className="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Дата</label>
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Дата</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                className="w-full max-w-xs px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                 {dateFormatted}
               </p>
             </div>
@@ -223,13 +274,13 @@ export default function DailyPage() {
         </div>
 
         {/* План на день */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">План на день</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">План на день</h2>
             {hasExistingData && !isEditingPlan && (
               <button
                 onClick={enableEditPlan}
-                className="px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all"
               >
                 ✏️ Редактировать
               </button>
@@ -242,14 +293,14 @@ export default function DailyPage() {
                 value={planText}
                 onChange={(e) => setPlanText(e.target.value)}
                 rows={8}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-gray-900 placeholder-gray-400 resize-y"
                 placeholder="Введите план на день..."
               />
-              <div className="mt-4 flex gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   onClick={savePlan}
                   disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 shadow-sm hover:shadow-md transition-all"
                 >
                   {hasExistingData ? 'Сохранить изменения' : 'Сохранить план'}
                 </button>
@@ -257,7 +308,7 @@ export default function DailyPage() {
                   <button
                     onClick={cancelEditPlan}
                     disabled={loading}
-                    className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50"
+                    className="px-6 py-2.5 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-500 disabled:opacity-50 transition-all"
                   >
                     Отменить
                   </button>
@@ -265,20 +316,20 @@ export default function DailyPage() {
               </div>
             </>
           ) : (
-            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md whitespace-pre-wrap">
+            <div className="p-5 bg-gray-50 dark:bg-gray-700/50 rounded-lg whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed min-h-[120px]">
               {planText || <span className="text-gray-400">План не заполнен</span>}
             </div>
           )}
         </div>
 
         {/* Факт выполнения */}
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 mb-6 shadow-lg border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Факт выполнения</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Факт выполнения</h2>
             {hasExistingData && !isEditingFact && (
               <button
                 onClick={enableEditFact}
-                className="px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-all"
               >
                 ✏️ Редактировать
               </button>
@@ -291,14 +342,14 @@ export default function DailyPage() {
                 value={factText}
                 onChange={(e) => setFactText(e.target.value)}
                 rows={8}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white text-gray-900 placeholder-gray-400 resize-y"
                 placeholder="Что реально сделали за день..."
               />
-              <div className="mt-4 flex gap-3">
+              <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   onClick={saveFact}
                   disabled={loading}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 shadow-sm hover:shadow-md transition-all"
                 >
                   {hasExistingData ? 'Сохранить изменения' : 'Сохранить факт'}
                 </button>
@@ -306,7 +357,7 @@ export default function DailyPage() {
                   <button
                     onClick={cancelEditFact}
                     disabled={loading}
-                    className="px-6 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-400 dark:hover:bg-gray-500 disabled:opacity-50"
+                    className="px-6 py-2.5 bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-500 disabled:opacity-50 transition-all"
                   >
                     Отменить
                   </button>
@@ -314,18 +365,18 @@ export default function DailyPage() {
               </div>
             </>
           ) : (
-            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-md whitespace-pre-wrap">
+            <div className="p-5 bg-gray-50 dark:bg-gray-700/50 rounded-lg whitespace-pre-wrap text-gray-700 dark:text-gray-300 leading-relaxed min-h-[120px]">
               {factText || <span className="text-gray-400">Факт не заполнен</span>}
             </div>
           )}
           
           {/* Кнопка получения оценки */}
           {!isEditingFact && !isEditingPlan && planText && factText && (
-            <div className="mt-4">
+            <div className="mt-6">
               <button
-                onClick={requestEvaluation}
+                onClick={evaluateDay}
                 disabled={evaluating}
-                className={`px-6 py-2 rounded-md font-semibold transition ${
+                className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-md hover:shadow-lg ${
                   evaluation
                     ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                     : 'bg-green-600 hover:bg-green-700 text-white animate-pulse'
@@ -355,36 +406,41 @@ export default function DailyPage() {
 
         {/* Оценка */}
         {evaluation && (
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Оценка дня</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 card-shadow hover:card-shadow-hover border border-gray-100 dark:border-gray-700">
+            <h2 className="text-2xl font-semibold mb-8 text-gray-900 dark:text-white">Оценка дня</h2>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <div className="text-2xl font-bold">{evaluation.strategyScore}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Стратегия</div>
-              </div>
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <div className="text-2xl font-bold">{evaluation.operationsScore}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Операции</div>
-              </div>
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <div className="text-2xl font-bold">{evaluation.teamScore}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Команда</div>
-              </div>
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded">
-                <div className="text-2xl font-bold">{evaluation.efficiencyScore}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Эффективность</div>
-              </div>
-            </div>
+            {/* Компактная карточка с оценками */}
+            <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/10 dark:via-gray-800 dark:to-indigo-900/10 rounded-2xl p-8 mb-8 border border-blue-100 dark:border-blue-900/30">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+                {/* Детальные оценки */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl backdrop-blur">
+                    <div className="text-5xl font-bold text-blue-600 dark:text-blue-400 mb-2">{evaluation.strategyScore}</div>
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Стратегия</div>
+                  </div>
+                  <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl backdrop-blur">
+                    <div className="text-5xl font-bold text-blue-600 dark:text-blue-400 mb-2">{evaluation.teamScore}</div>
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Команда</div>
+                  </div>
+                  <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl backdrop-blur">
+                    <div className="text-5xl font-bold text-blue-600 dark:text-blue-400 mb-2">{evaluation.operationsScore}</div>
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Операции</div>
+                  </div>
+                  <div className="text-center p-4 bg-white/60 dark:bg-gray-800/60 rounded-xl backdrop-blur">
+                    <div className="text-5xl font-bold text-blue-600 dark:text-blue-400 mb-2">{evaluation.efficiencyScore}</div>
+                    <div className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">Эффективность</div>
+                  </div>
+                </div>
 
-            <div className="mb-6 text-center">
-              <div className={`inline-block px-8 py-4 rounded-lg ${
-                evaluation.overallScore >= 7 ? 'bg-green-100 text-green-800' :
-                evaluation.overallScore >= 5 ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                <div className="text-4xl font-bold">{evaluation.overallScore.toFixed(1)}</div>
-                <div className="text-sm">Общая оценка</div>
+                {/* Общая оценка */}
+                <div className={`px-10 py-8 rounded-2xl shadow-xl backdrop-blur ${
+                  evaluation.overallScore >= 7 ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white' :
+                  evaluation.overallScore >= 5 ? 'bg-gradient-to-br from-yellow-500 to-amber-600 text-white' :
+                  'bg-gradient-to-br from-red-500 to-rose-600 text-white'
+                }`}>
+                  <div className="text-6xl font-bold mb-3">{evaluation.overallScore.toFixed(1)}</div>
+                  <div className="text-sm font-medium opacity-90 uppercase tracking-wider">Общая оценка</div>
+                </div>
               </div>
             </div>
 
@@ -426,5 +482,6 @@ export default function DailyPage() {
         )}
       </div>
     </main>
+    </>
   )
 }

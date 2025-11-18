@@ -4,6 +4,9 @@ import { anthropic, MODEL_NAME } from '@/lib/anthropic'
 import { getAllPeriods } from '@/lib/periods'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { rateLimit, getRateLimitHeaders } from '@/lib/rateLimit'
+import { getCachedEvaluation, setCachedEvaluation, clearEvaluationCache } from '@/lib/cache'
+import { DailyEntrySchema, validateData } from '@/lib/validation'
 
 // Нормализация даты - устанавливаем полночь по UTC
 function normalizeDate(dateStr: string): Date {
@@ -18,6 +21,20 @@ function normalizeDate(dateStr: string): Date {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const clientIP = request.headers.get('x-forwarded-for') || 'localhost'
+    const rateLimitResult = rateLimit(clientIP)
+    
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Too many requests. Please try again later.' },
+        { 
+          status: 429,
+          headers: getRateLimitHeaders(rateLimitResult.limit, rateLimitResult.remaining, rateLimitResult.reset)
+        }
+      )
+    }
+
     const body = await request.json()
     const { date: dateStr } = body
 
@@ -46,6 +63,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Both plan and fact must be filled before evaluation' },
         { status: 400 }
+      )
+    }
+
+    // Проверить кэш
+    const cached = getCachedEvaluation(dailyEntry.id)
+    if (cached) {
+      console.log('✨ Returning cached evaluation')
+      return NextResponse.json(
+        { evaluation: cached },
+        { headers: getRateLimitHeaders(rateLimitResult.limit, rateLimitResult.remaining, rateLimitResult.reset) }
       )
     }
 
@@ -151,7 +178,14 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    return NextResponse.json({ evaluation, evaluationData })
+    // Сохранить в кэш
+    clearEvaluationCache(dailyEntry.id) // Очистить старый кэш если есть
+    setCachedEvaluation(dailyEntry.id, evaluation)
+
+    return NextResponse.json(
+      { evaluation, evaluationData },
+      { headers: getRateLimitHeaders(rateLimitResult.limit, rateLimitResult.remaining, rateLimitResult.reset) }
+    )
   } catch (error: any) {
     console.error('Error evaluating day:', error)
     return NextResponse.json(

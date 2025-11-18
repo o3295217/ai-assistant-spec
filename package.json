@@ -27,10 +27,12 @@
     "@types/react-dom": "^19.2.2",
     "date-fns": "^4.1.0",
     "next": "^16.0.1",
+    "node-cache": "^5.1.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.3.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.17",
