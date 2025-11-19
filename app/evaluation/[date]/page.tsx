@@ -81,16 +81,16 @@ export default function EvaluationPage({ params }: { params: Promise<{ date: str
     )
   }
 
-  const eval = dailyEntry.evaluation
+  const evaluation = dailyEntry.evaluation
   const date = new Date(dailyEntry.date)
 
   const alignments = [
-    { label: 'День → Неделя', text: eval.alignmentDayWeek },
-    { label: 'Неделя → Месяц', text: eval.alignmentWeekMonth },
-    { label: 'Месяц → Квартал', text: eval.alignmentMonthQuarter },
-    { label: 'Квартал → Полугодие', text: eval.alignmentQuarterHalf },
-    { label: 'Полугодие → Год', text: eval.alignmentHalfYear },
-    { label: 'Год → Мечта', text: eval.alignmentYearDream },
+    { label: 'День → Неделя', text: evaluation.alignmentDayWeek },
+    { label: 'Неделя → Месяц', text: evaluation.alignmentWeekMonth },
+    { label: 'Месяц → Квартал', text: evaluation.alignmentMonthQuarter },
+    { label: 'Квартал → Полугодие', text: evaluation.alignmentQuarterHalf },
+    { label: 'Полугодие → Год', text: evaluation.alignmentHalfYear },
+    { label: 'Год → Мечта', text: evaluation.alignmentYearDream },
   ]
 
   return (
@@ -107,7 +107,7 @@ export default function EvaluationPage({ params }: { params: Promise<{ date: str
       {/* Overall Score */}
       <div className="card text-center bg-gradient-to-r from-primary-50 to-purple-50">
         <h2 className="text-xl font-semibold mb-2">Общая оценка</h2>
-        <p className={`text-6xl font-bold ${getScoreColor(eval.overallScore)}`}>{eval.overallScore}</p>
+        <p className={`text-6xl font-bold ${getScoreColor(evaluation.overallScore)}`}>{evaluation.overallScore}</p>
         <p className="text-gray-600 mt-1">из 10</p>
       </div>
 
@@ -115,19 +115,19 @@ export default function EvaluationPage({ params }: { params: Promise<{ date: str
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card text-center">
           <p className="text-sm text-gray-600 mb-1">Стратегия</p>
-          <p className={`text-3xl font-bold ${getScoreColor(eval.strategyScore)}`}>{eval.strategyScore}</p>
+          <p className={`text-3xl font-bold ${getScoreColor(evaluation.strategyScore)}`}>{evaluation.strategyScore}</p>
         </div>
         <div className="card text-center">
           <p className="text-sm text-gray-600 mb-1">Операции</p>
-          <p className={`text-3xl font-bold ${getScoreColor(eval.operationsScore)}`}>{eval.operationsScore}</p>
+          <p className={`text-3xl font-bold ${getScoreColor(evaluation.operationsScore)}`}>{evaluation.operationsScore}</p>
         </div>
         <div className="card text-center">
           <p className="text-sm text-gray-600 mb-1">Команда</p>
-          <p className={`text-3xl font-bold ${getScoreColor(eval.teamScore)}`}>{eval.teamScore}</p>
+          <p className={`text-3xl font-bold ${getScoreColor(evaluation.teamScore)}`}>{evaluation.teamScore}</p>
         </div>
         <div className="card text-center">
           <p className="text-sm text-gray-600 mb-1">Эффективность</p>
-          <p className={`text-3xl font-bold ${getScoreColor(eval.efficiencyScore)}`}>{eval.efficiencyScore}</p>
+          <p className={`text-3xl font-bold ${getScoreColor(evaluation.efficiencyScore)}`}>{evaluation.efficiencyScore}</p>
         </div>
       </div>
 
@@ -145,7 +145,7 @@ export default function EvaluationPage({ params }: { params: Promise<{ date: str
           </div>
           <div>
             <h3 className="font-semibold text-gray-700 mb-2">Анализ:</h3>
-            <p className="text-gray-800 whitespace-pre-wrap">{eval.planVsFactText}</p>
+            <p className="text-gray-800 whitespace-pre-wrap">{evaluation.planVsFactText}</p>
           </div>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function EvaluationPage({ params }: { params: Promise<{ date: str
       {/* Feedback */}
       <div className="card bg-red-50 border border-red-200">
         <h2 className="text-xl font-bold mb-4 text-red-900">💬 Обратная связь</h2>
-        <p className="text-gray-800 whitespace-pre-wrap">{eval.feedbackText}</p>
+        <p className="text-gray-800 whitespace-pre-wrap">{evaluation.feedbackText}</p>
       </div>
 
       {/* Alignment */}
@@ -178,7 +178,7 @@ export default function EvaluationPage({ params }: { params: Promise<{ date: str
       {/* Recommendations */}
       <div className="card bg-green-50 border border-green-200">
         <h2 className="text-xl font-bold mb-4 text-green-900">💡 Рекомендации</h2>
-        <p className="text-gray-800 whitespace-pre-wrap">{eval.recommendationsText}</p>
+        <p className="text-gray-800 whitespace-pre-wrap">{evaluation.recommendationsText}</p>
       </div>
     </div>
   )
