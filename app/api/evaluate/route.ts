@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { evaluateDay, EvaluationRequest } from '@/lib/anthropic'
+import { getPeriodDates } from '@/lib/dates'
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { dailyEntryId } = body
+
+    if (!dailyEntryId) {
+      return NextResponse.json({ error: 'dailyEntryId is required' }, { status: 400 })
+    }
+
+    // Get daily entry
+    const dailyEntry = await prisma.dailyEntry.findUnique({
+      where: { id: dailyEntryId },
+    })
+
+    if (!dailyEntry) {
+      return NextResponse.json({ error: 'Daily entry not found' }, { status: 404 })
+    }
+
+    if (!dailyEntry.factText) {
+      return NextResponse.json({ error: 'Fact text is required for evaluation' }, { status: 400 })
+    }
+
+    // Get dream goal
+    const dream = await prisma.dreamGoal.findFirst({
+      orderBy: { createdAt: 'desc' },
+    })
+
+    // Get all period goals
+    const date = dailyEntry.date
+    const yearPeriod = getPeriodDates(date, 'year')
+    const halfYearPeriod = getPeriodDates(date, 'half_year')
+    const quarterPeriod = getPeriodDates(date, 'quarter')
+    const monthPeriod = getPeriodDates(date, 'month')
+    const weekPeriod = getPeriodDates(date, 'week')
+
+    const [yearGoals, halfYearGoals, quarterGoals, monthGoals, weekGoals] = await Promise.all([
+      prisma.periodGoal.findFirst({
+        where: { periodType: 'year', periodStart: yearPeriod.start },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.periodGoal.findFirst({
+        where: { periodType: 'half_year', periodStart: halfYearPeriod.start },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.periodGoal.findFirst({
+        where: { periodType: 'quarter', periodStart: quarterPeriod.start },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.periodGoal.findFirst({
+        where: { periodType: 'month', periodStart: monthPeriod.start },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.periodGoal.findFirst({
+        where: { periodType: 'week', periodStart: weekPeriod.start },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ])
+
+    // Get open tasks
+    const openTasks = await prisma.openTask.findMany({
+      where: { isClosed: false },
+    })
+
+    // Prepare evaluation request
+    const evaluationRequest: EvaluationRequest = {
+      dreamGoal: dream?.goalText || 'Не указана',
+      yearGoals: yearGoals ? JSON.parse(yearGoals.goalsJson) : [],
+      halfYearGoals: halfYearGoals ? JSON.parse(halfYearGoals.goalsJson) : [],
+      quarterGoals: quarterGoals ? JSON.parse(quarterGoals.goalsJson) : [],
+      monthGoals: monthGoals ? JSON.parse(monthGoals.goalsJson) : [],
+      weekGoals: weekGoals ? JSON.parse(weekGoals.goalsJson) : [],
+      planText: dailyEntry.planText || '',
+      factText: dailyEntry.factText || '',
+      date: date.toLocaleDateString('ru-RU'),
+      openTasks: openTasks.map((t) => `[${t.taskType}] ${t.taskText}`),
+    }
+
+    // Call Claude API
+    const evaluationResponse = await evaluateDay(evaluationRequest)
+
+    // Save evaluation
+    const evaluation = await prisma.evaluation.create({
+      data: {
+        dailyEntryId,
+        strategyScore: evaluationResponse.strategy_score,
+        operationsScore: evaluationResponse.operations_score,
+        teamScore: evaluationResponse.team_score,
+        efficiencyScore: evaluationResponse.efficiency_score,
+        overallScore: evaluationResponse.overall_score,
+        feedbackText: evaluationResponse.feedback,
+        planVsFactText: evaluationResponse.plan_vs_fact,
+        alignmentDayWeek: evaluationResponse.alignment.day_to_week,
+        alignmentWeekMonth: evaluationResponse.alignment.week_to_month,
+        alignmentMonthQuarter: evaluationResponse.alignment.month_to_quarter,
+        alignmentQuarterHalf: evaluationResponse.alignment.quarter_to_half,
+        alignmentHalfYear: evaluationResponse.alignment.half_to_year,
+        alignmentYearDream: evaluationResponse.alignment.year_to_dream,
+        recommendationsText: evaluationResponse.recommendations,
+      },
+    })
+
+    return NextResponse.json(evaluation)
+  } catch (error) {
+    console.error('Error evaluating day:', error)
+    return NextResponse.json({ error: 'Failed to evaluate day' }, { status: 500 })
+  }
+}

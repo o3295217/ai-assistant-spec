@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model DreamGoal {
+  id        Int      @id @default(autoincrement())
+  goalText  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dream_goal")
+}
+
+model PeriodGoal {
+  id          Int      @id @default(autoincrement())
+  periodType  String   // 'year', 'half_year', 'quarter', 'month', 'week'
+  periodStart DateTime
+  periodEnd   DateTime
+  goalsJson   String   // JSON array of goals
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("period_goals")
+}
+
+model DailyEntry {
+  id         Int          @id @default(autoincrement())
+  date       DateTime     @unique
+  planText   String?
+  factText   String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  evaluation Evaluation?
+
+  @@map("daily_entries")
+}
+
+model Evaluation {
+  id                   Int        @id @default(autoincrement())
+  dailyEntryId         Int        @unique
+  dailyEntry           DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+  strategyScore        Int
+  operationsScore      Int
+  teamScore            Int
+  efficiencyScore      Int
+  overallScore         Float
+  feedbackText         String
+  planVsFactText       String
+  alignmentDayWeek     String
+  alignmentWeekMonth   String
+  alignmentMonthQuarter String
+  alignmentQuarterHalf String
+  alignmentHalfYear    String
+  alignmentYearDream   String
+  recommendationsText  String
+  createdAt            DateTime   @default(now())
+
+  @@map("evaluations")
+}
+
+model OpenTask {
+  id         Int       @id @default(autoincrement())
+  taskText   String
+  taskType   String    // 'strategic' or 'operational'
+  originDate DateTime
+  isClosed   Boolean   @default(false)
+  closedAt   DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("open_tasks")
+}
