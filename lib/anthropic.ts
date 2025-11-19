@@ -4,6 +4,23 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
+export interface UserProfile {
+  name?: string
+  occupation?: string
+  industry?: string
+  maritalStatus?: string
+  hobbies?: string
+  sports?: string
+  location?: string
+  age?: number
+  education?: string
+  teamSize?: number
+  workExperience?: string
+  values?: string
+  challenges?: string
+  other?: string
+}
+
 export interface EvaluationRequest {
   dreamGoal: string
   yearGoals: string[]
@@ -15,6 +32,7 @@ export interface EvaluationRequest {
   factText: string
   date: string
   openTasks: string[]
+  userProfile?: UserProfile
 }
 
 export interface EvaluationResponse {
@@ -37,8 +55,39 @@ export interface EvaluationResponse {
 }
 
 export async function evaluateDay(request: EvaluationRequest): Promise<EvaluationResponse> {
-  const prompt = `Ты строгий ИИ-ассистент для управления эффективностью руководителя компании.
+  // Формируем блок с информацией о пользователе
+  let userProfileSection = ''
+  if (request.userProfile) {
+    const p = request.userProfile
+    const profileDetails: string[] = []
 
+    if (p.name) profileDetails.push(`Имя: ${p.name}`)
+    if (p.age) profileDetails.push(`Возраст: ${p.age}`)
+    if (p.occupation) profileDetails.push(`Должность: ${p.occupation}`)
+    if (p.industry) profileDetails.push(`Сфера деятельности: ${p.industry}`)
+    if (p.teamSize) profileDetails.push(`Размер команды: ${p.teamSize} человек`)
+    if (p.location) profileDetails.push(`Место проживания: ${p.location}`)
+    if (p.maritalStatus) profileDetails.push(`Семейное положение: ${p.maritalStatus}`)
+    if (p.education) profileDetails.push(`Образование: ${p.education}`)
+    if (p.workExperience) profileDetails.push(`Опыт работы: ${p.workExperience}`)
+    if (p.hobbies) profileDetails.push(`Хобби: ${p.hobbies}`)
+    if (p.sports) profileDetails.push(`Спорт: ${p.sports}`)
+    if (p.values) profileDetails.push(`Ценности: ${p.values}`)
+    if (p.challenges) profileDetails.push(`Текущие вызовы: ${p.challenges}`)
+    if (p.other) profileDetails.push(`Дополнительно: ${p.other}`)
+
+    if (profileDetails.length > 0) {
+      userProfileSection = `
+👤 ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ:
+${profileDetails.join('\n')}
+
+---
+`
+    }
+  }
+
+  const prompt = `Ты строгий ИИ-ассистент для управления эффективностью руководителя компании.
+${userProfileSection}
 ИЕРАРХИЯ ЦЕЛЕЙ:
 
 🎯 МЕЧТА (5 лет):
@@ -95,9 +144,16 @@ ${request.openTasks.length > 0 ? request.openTasks.map((t, i) => `${i + 1}. ${t}
    - Работают ли полугодовые на годовые?
    - Работают ли годовые на мечту?
 
-5. Дай жесткую конструктивную критику (без сахара)
+5. УЧИТЫВАЙ КОНТЕКСТ ПОЛЬЗОВАТЕЛЯ:
+   - Его роль и уровень ответственности
+   - Размер команды и область деятельности
+   - Личные ценности и приоритеты
+   - Текущие вызовы и обстоятельства
+   - Баланс работы и личной жизни (хобби, спорт, семья)
 
-6. Дай конкретные рекомендации на завтра
+6. Дай жесткую конструктивную критику (без сахара), но с учетом личности пользователя
+
+7. Дай конкретные персонализированные рекомендации на завтра
 
 ФОРМАТ ОТВЕТА - СТРОГО JSON:
 {

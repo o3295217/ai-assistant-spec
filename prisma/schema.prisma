@@ -74,3 +74,25 @@ model OpenTask {
 
   @@map("open_tasks")
 }
+
+model UserProfile {
+  id             Int      @id @default(autoincrement())
+  name           String?  // Имя
+  occupation     String?  // Работа/должность
+  industry       String?  // Вид деятельности
+  maritalStatus  String?  // Семейное положение
+  hobbies        String?  // Хобби
+  sports         String?  // Спорт
+  location       String?  // Где живу
+  age            Int?     // Возраст
+  education      String?  // Образование
+  teamSize       Int?     // Размер команды
+  workExperience String?  // Опыт работы
+  values         String?  // Ценности
+  challenges     String?  // Текущие вызовы
+  other          String?  // Другая информация
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("user_profile")
+}

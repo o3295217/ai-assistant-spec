@@ -66,6 +66,11 @@ export async function POST(request: NextRequest) {
       where: { isClosed: false },
     })
 
+    // Get user profile
+    const userProfile = await prisma.userProfile.findFirst({
+      orderBy: { createdAt: 'desc' },
+    })
+
     // Prepare evaluation request
     const evaluationRequest: EvaluationRequest = {
       dreamGoal: dream?.goalText || 'Не указана',
@@ -78,6 +83,24 @@ export async function POST(request: NextRequest) {
       factText: dailyEntry.factText || '',
       date: date.toLocaleDateString('ru-RU'),
       openTasks: openTasks.map((t) => `[${t.taskType}] ${t.taskText}`),
+      userProfile: userProfile
+        ? {
+            name: userProfile.name || undefined,
+            occupation: userProfile.occupation || undefined,
+            industry: userProfile.industry || undefined,
+            maritalStatus: userProfile.maritalStatus || undefined,
+            hobbies: userProfile.hobbies || undefined,
+            sports: userProfile.sports || undefined,
+            location: userProfile.location || undefined,
+            age: userProfile.age || undefined,
+            education: userProfile.education || undefined,
+            teamSize: userProfile.teamSize || undefined,
+            workExperience: userProfile.workExperience || undefined,
+            values: userProfile.values || undefined,
+            challenges: userProfile.challenges || undefined,
+            other: userProfile.other || undefined,
+          }
+        : undefined,
     }
 
     // Call Claude API
