@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 17, 24, 39;
+  --background-rgb: 249, 250, 251;
+  --card-bg: 255, 255, 255;
+  --border-color: 229, 231, 235;
+  --accent-blue: 59, 130, 246;
+  
+  /* Design tokens */
+  --color-primary: 59, 130, 246;
+  --color-secondary: 107, 114, 128;
+  --color-success: 34, 197, 94;
+  --color-warning: 251, 146, 60;
+  --color-danger: 239, 68, 68;
+  
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 243, 244, 246;
+    --background-rgb: 17, 24, 39;
+    --card-bg: 31, 41, 55;
+    --border-color: 55, 65, 81;
+    --accent-blue: 96, 165, 250;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  min-height: 100vh;
+  font-feature-settings: 'liga' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Минималистичная типографика */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  color: rgb(var(--foreground-rgb));
+}
+
+h1 { font-size: 2rem; }
+h2 { font-size: 1.5rem; }
+
+/* Плавные переходы */
+* {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Мягкие тени для карточек */
+.card-shadow {
+  box-shadow: var(--shadow-sm);
+}
+
+.card-shadow-hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Скрытие скроллбаров но с возможностью скролла */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Анимации */
+@keyframes progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-progress {
+  animation: progress 1.5s ease-in-out infinite;
+  width: 25%;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Кастомные утилиты */
+.text-gradient {
+  background: linear-gradient(135deg, rgb(var(--color-primary)), rgb(var(--color-success)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
