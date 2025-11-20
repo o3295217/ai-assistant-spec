@@ -77,49 +77,15 @@ export async function evaluateDay(request: EvaluationRequest): Promise<Evaluatio
     if (p.other) profileDetails.push(`Дополнительно: ${p.other}`)
 
     if (profileDetails.length > 0) {
-      userProfileSection = `
-👤 ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ:
+      userProfileSection = `👤 ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ:
 ${profileDetails.join('\n')}
 
----
 `
     }
   }
 
-  const prompt = `Ты строгий ИИ-ассистент для управления эффективностью руководителя компании.
-${userProfileSection}
-ИЕРАРХИЯ ЦЕЛЕЙ:
-
-🎯 МЕЧТА (5 лет):
-${request.dreamGoal}
-
-📅 ЦЕЛИ НА ТЕКУЩИЙ ГОД:
-${request.yearGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
-
-📆 ЦЕЛИ НА ТЕКУЩЕЕ ПОЛУГОДИЕ:
-${request.halfYearGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
-
-📊 ЦЕЛИ НА ТЕКУЩИЙ КВАРТАЛ:
-${request.quarterGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
-
-📋 ЦЕЛИ НА ТЕКУЩИЙ МЕСЯЦ:
-${request.monthGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
-
-📌 ЦЕЛИ НА ТЕКУЩУЮ НЕДЕЛЮ:
-${request.weekGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
-
----
-
-📝 ПЛАН НА СЕГОДНЯ (${request.date}):
-${request.planText}
-
-✅ ФАКТ ВЫПОЛНЕНИЯ:
-${request.factText}
-
-❌ НЕЗАКРЫТЫЕ ЗАДАЧИ ИЗ ПРОШЛОГО:
-${request.openTasks.length > 0 ? request.openTasks.map((t, i) => `${i + 1}. ${t}`).join('\n') : 'Нет'}
-
----
+  // CACHEABLE: System instructions (никогда не меняются)
+  const systemInstructions = `Ты строгий ИИ-ассистент для управления эффективностью руководителя компании.
 
 ТВОЯ ЗАДАЧА:
 
@@ -175,16 +141,74 @@ ${request.openTasks.length > 0 ? request.openTasks.map((t, i) => `${i + 1}. ${t}
   "recommendations": "конкретные рекомендации"
 }`
 
+  // CACHEABLE: Профиль пользователя + иерархия целей + незакрытые задачи (меняются редко)
+  const contextBlock = `${userProfileSection}ИЕРАРХИЯ ЦЕЛЕЙ:
+
+🎯 МЕЧТА (5 лет):
+${request.dreamGoal}
+
+📅 ЦЕЛИ НА ТЕКУЩИЙ ГОД:
+${request.yearGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
+
+📆 ЦЕЛИ НА ТЕКУЩЕЕ ПОЛУГОДИЕ:
+${request.halfYearGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
+
+📊 ЦЕЛИ НА ТЕКУЩИЙ КВАРТАЛ:
+${request.quarterGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
+
+📋 ЦЕЛИ НА ТЕКУЩИЙ МЕСЯЦ:
+${request.monthGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
+
+📌 ЦЕЛИ НА ТЕКУЩУЮ НЕДЕЛЮ:
+${request.weekGoals.map((g, i) => `${i + 1}. ${g}`).join('\n')}
+
+❌ НЕЗАКРЫТЫЕ ЗАДАЧИ ИЗ ПРОШЛОГО:
+${request.openTasks.length > 0 ? request.openTasks.map((t, i) => `${i + 1}. ${t}`).join('\n') : 'Нет'}`
+
+  // NON-CACHEABLE: План и факт на сегодня (меняется каждый раз)
+  const dailyBlock = `📝 ПЛАН НА СЕГОДНЯ (${request.date}):
+${request.planText}
+
+✅ ФАКТ ВЫПОЛНЕНИЯ:
+${request.factText}`
+
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
     max_tokens: 4096,
+    system: [
+      {
+        type: 'text',
+        text: systemInstructions,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     messages: [
       {
         role: 'user',
-        content: prompt,
+        content: [
+          {
+            type: 'text',
+            text: contextBlock,
+            cache_control: { type: 'ephemeral' },
+          },
+          {
+            type: 'text',
+            text: dailyBlock,
+          },
+        ],
       },
     ],
   })
+
+  // Log cache usage stats for monitoring
+  if (message.usage) {
+    console.log('🔍 Anthropic API Usage:', {
+      input_tokens: message.usage.input_tokens,
+      cache_creation_input_tokens: (message.usage as any).cache_creation_input_tokens || 0,
+      cache_read_input_tokens: (message.usage as any).cache_read_input_tokens || 0,
+      output_tokens: message.usage.output_tokens,
+    })
+  }
 
   const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
 
