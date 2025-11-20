@@ -71,6 +71,18 @@ export async function POST(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     })
 
+    // Get selected criteria
+    const selectedCriteria = await prisma.userSelectedCriteria.findMany({
+      where: {
+        userId: 1, // Single-user app
+        isEnabled: true
+      },
+      include: {
+        criteria: true
+      },
+      orderBy: { order: 'asc' }
+    })
+
     // Prepare evaluation request
     const evaluationRequest: EvaluationRequest = {
       dreamGoal: dream?.goalText || 'Не указана',
@@ -81,8 +93,16 @@ export async function POST(request: NextRequest) {
       weekGoals: weekGoals ? JSON.parse(weekGoals.goalsJson) : [],
       planText: dailyEntry.planText || '',
       factText: dailyEntry.factText || '',
+      contextText: dailyEntry.contextText || undefined,  // Новое поле
       date: date.toLocaleDateString('ru-RU'),
       openTasks: openTasks.map((t) => `[${t.taskType}] ${t.taskText}`),
+      selectedCriteria: selectedCriteria.length > 0
+        ? selectedCriteria.map(sc => ({
+            key: sc.criteria.key,
+            nameRu: sc.criteria.nameRu,
+            category: sc.criteria.category
+          }))
+        : undefined, // Используем дефолтные если не выбраны
       userProfile: userProfile
         ? {
             name: userProfile.name || undefined,
@@ -110,10 +130,13 @@ export async function POST(request: NextRequest) {
     const evaluation = await prisma.evaluation.create({
       data: {
         dailyEntryId,
-        strategyScore: evaluationResponse.strategy_score,
-        operationsScore: evaluationResponse.operations_score,
-        teamScore: evaluationResponse.team_score,
-        efficiencyScore: evaluationResponse.efficiency_score,
+        // Старые поля для обратной совместимости
+        strategyScore: evaluationResponse.strategy_score || null,
+        operationsScore: evaluationResponse.operations_score || null,
+        teamScore: evaluationResponse.team_score || null,
+        efficiencyScore: evaluationResponse.efficiency_score || null,
+        // Новое поле - динамические оценки в JSON
+        scoresJson: evaluationResponse.scores ? JSON.stringify(evaluationResponse.scores) : null,
         overallScore: evaluationResponse.overall_score,
         feedbackText: evaluationResponse.feedback,
         planVsFactText: evaluationResponse.plan_vs_fact,

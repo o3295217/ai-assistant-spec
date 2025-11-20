@@ -29,36 +29,40 @@ model PeriodGoal {
 }
 
 model DailyEntry {
-  id         Int          @id @default(autoincrement())
-  date       DateTime     @unique
-  planText   String?
-  factText   String?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  evaluation Evaluation?
+  id          Int          @id @default(autoincrement())
+  date        DateTime     @unique
+  planText    String?
+  factText    String?
+  contextText String?      // Контекст дня / Окружающий мир
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  evaluation  Evaluation?
 
   @@map("daily_entries")
 }
 
 model Evaluation {
-  id                   Int        @id @default(autoincrement())
-  dailyEntryId         Int        @unique
-  dailyEntry           DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
-  strategyScore        Int
-  operationsScore      Int
-  teamScore            Int
-  efficiencyScore      Int
-  overallScore         Float
-  feedbackText         String
-  planVsFactText       String
-  alignmentDayWeek     String
-  alignmentWeekMonth   String
+  id                    Int        @id @default(autoincrement())
+  dailyEntryId          Int        @unique
+  dailyEntry            DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+  // Старые поля (для обратной совместимости, nullable)
+  strategyScore         Int?
+  operationsScore       Int?
+  teamScore             Int?
+  efficiencyScore       Int?
+  // Новые динамические оценки в JSON формате
+  scoresJson            String?    // JSON: {criteriaKey: score}
+  overallScore          Float
+  feedbackText          String
+  planVsFactText        String
+  alignmentDayWeek      String
+  alignmentWeekMonth    String
   alignmentMonthQuarter String
-  alignmentQuarterHalf String
-  alignmentHalfYear    String
-  alignmentYearDream   String
-  recommendationsText  String
-  createdAt            DateTime   @default(now())
+  alignmentQuarterHalf  String
+  alignmentHalfYear     String
+  alignmentYearDream    String
+  recommendationsText   String
+  createdAt             DateTime   @default(now())
 
   @@map("evaluations")
 }
@@ -118,4 +122,35 @@ model ProfileItem {
   updatedAt DateTime     @updatedAt
 
   @@map("profile_items")
+}
+
+// Предопределенные критерии оценки
+model EvaluationCriteria {
+  id                    Int                     @id @default(autoincrement())
+  key                   String                  @unique // Уникальный ключ (например: "strategy", "operations")
+  nameRu                String                  // Название на русском
+  nameEn                String?                 // Название на английском (опционально)
+  category              String                  // Категория: "work", "personal", "development", "health", "achievements"
+  description           String?                 // Описание критерия
+  isDefault             Boolean                 @default(false) // Является ли критерием по умолчанию
+  order                 Int                     @default(0) // Порядок отображения
+  createdAt             DateTime                @default(now())
+  userSelectedCriteria  UserSelectedCriteria[]
+
+  @@map("evaluation_criteria")
+}
+
+// Выбранные пользователем критерии
+model UserSelectedCriteria {
+  id          Int                 @id @default(autoincrement())
+  userId      Int                 @default(1) // ID пользователя (пока всегда 1, т.к. single-user app)
+  criteriaId  Int                 // ID критерия
+  criteria    EvaluationCriteria  @relation(fields: [criteriaId], references: [id], onDelete: Cascade)
+  isEnabled   Boolean             @default(true) // Активен ли критерий
+  order       Int                 @default(0) // Порядок отображения для пользователя
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@unique([userId, criteriaId]) // Один критерий на пользователя только один раз
+  @@map("user_selected_criteria")
 }
