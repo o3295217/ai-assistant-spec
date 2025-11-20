@@ -1,0 +1,101 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+// GET /api/profile/blocks - получить все блоки с пунктами
+export async function GET() {
+  try {
+    const blocks = await prisma.profileBlock.findMany({
+      include: {
+        items: {
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { order: 'asc' },
+    })
+
+    return NextResponse.json(blocks)
+  } catch (error) {
+    console.error('Error fetching profile blocks:', error)
+    return NextResponse.json({ error: 'Failed to fetch profile blocks' }, { status: 500 })
+  }
+}
+
+// POST /api/profile/blocks - создать новый блок
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { title } = body
+
+    if (!title || typeof title !== 'string' || title.trim() === '') {
+      return NextResponse.json({ error: 'Title is required' }, { status: 400 })
+    }
+
+    // Получаем максимальный order для нового блока
+    const maxOrder = await prisma.profileBlock.aggregate({
+      _max: { order: true },
+    })
+
+    const block = await prisma.profileBlock.create({
+      data: {
+        title: title.trim(),
+        order: (maxOrder._max.order || 0) + 1,
+      },
+      include: {
+        items: true,
+      },
+    })
+
+    return NextResponse.json(block)
+  } catch (error) {
+    console.error('Error creating profile block:', error)
+    return NextResponse.json({ error: 'Failed to create profile block' }, { status: 500 })
+  }
+}
+
+// DELETE /api/profile/blocks?id=123 - удалить блок
+export async function DELETE(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ error: 'Block ID is required' }, { status: 400 })
+    }
+
+    await prisma.profileBlock.delete({
+      where: { id: parseInt(id) },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting profile block:', error)
+    return NextResponse.json({ error: 'Failed to delete profile block' }, { status: 500 })
+  }
+}
+
+// PATCH /api/profile/blocks - обновить название блока
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, title } = body
+
+    if (!id || !title || typeof title !== 'string' || title.trim() === '') {
+      return NextResponse.json({ error: 'ID and title are required' }, { status: 400 })
+    }
+
+    const block = await prisma.profileBlock.update({
+      where: { id: parseInt(id) },
+      data: { title: title.trim() },
+      include: {
+        items: {
+          orderBy: { order: 'asc' },
+        },
+      },
+    })
+
+    return NextResponse.json(block)
+  } catch (error) {
+    console.error('Error updating profile block:', error)
+    return NextResponse.json({ error: 'Failed to update profile block' }, { status: 500 })
+  }
+}

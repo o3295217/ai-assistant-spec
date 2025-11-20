@@ -96,3 +96,26 @@ model UserProfile {
 
   @@map("user_profile")
 }
+
+model ProfileBlock {
+  id        Int            @id @default(autoincrement())
+  title     String         // Название блока (например: "Личные интересы", "Навыки")
+  order     Int            @default(0) // Порядок отображения
+  items     ProfileItem[]  // Пункты внутри блока
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("profile_blocks")
+}
+
+model ProfileItem {
+  id        Int          @id @default(autoincrement())
+  blockId   Int          // Связь с блоком
+  block     ProfileBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  content   String       // Содержимое пункта (например: "Бег", "Фотография")
+  order     Int          @default(0) // Порядок внутри блока
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("profile_items")
+}

@@ -19,6 +19,24 @@ interface ProfileData {
   other: string
 }
 
+interface ProfileItem {
+  id: number
+  blockId: number
+  content: string
+  order: number
+  createdAt: string
+  updatedAt: string
+}
+
+interface ProfileBlock {
+  id: number
+  title: string
+  order: number
+  items: ProfileItem[]
+  createdAt: string
+  updatedAt: string
+}
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileData>({
     name: '',
@@ -36,12 +54,16 @@ export default function ProfilePage() {
     challenges: '',
     other: '',
   })
+  const [blocks, setBlocks] = useState<ProfileBlock[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [newBlockTitle, setNewBlockTitle] = useState('')
+  const [newItemContent, setNewItemContent] = useState<{ [blockId: number]: string }>({})
 
   useEffect(() => {
     loadProfile()
+    loadBlocks()
   }, [])
 
   const loadProfile = async () => {
@@ -70,6 +92,92 @@ export default function ProfilePage() {
       console.error('Error loading profile:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadBlocks = async () => {
+    try {
+      const res = await fetch('/api/profile/blocks')
+      const data = await res.json()
+      setBlocks(data || [])
+    } catch (error) {
+      console.error('Error loading blocks:', error)
+    }
+  }
+
+  const addBlock = async () => {
+    if (!newBlockTitle.trim()) return
+
+    try {
+      const res = await fetch('/api/profile/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newBlockTitle }),
+      })
+      const newBlock = await res.json()
+      setBlocks([...blocks, newBlock])
+      setNewBlockTitle('')
+      setMessage('✅ Блок добавлен')
+      setTimeout(() => setMessage(''), 2000)
+    } catch (error) {
+      console.error('Error adding block:', error)
+      setMessage('❌ Ошибка при добавлении блока')
+    }
+  }
+
+  const deleteBlock = async (blockId: number) => {
+    if (!confirm('Удалить этот блок и все его пункты?')) return
+
+    try {
+      await fetch(`/api/profile/blocks?id=${blockId}`, { method: 'DELETE' })
+      setBlocks(blocks.filter((b) => b.id !== blockId))
+      setMessage('✅ Блок удален')
+      setTimeout(() => setMessage(''), 2000)
+    } catch (error) {
+      console.error('Error deleting block:', error)
+      setMessage('❌ Ошибка при удалении блока')
+    }
+  }
+
+  const addItem = async (blockId: number) => {
+    const content = newItemContent[blockId]
+    if (!content?.trim()) return
+
+    try {
+      const res = await fetch('/api/profile/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockId, content }),
+      })
+      const newItem = await res.json()
+
+      setBlocks(
+        blocks.map((block) =>
+          block.id === blockId ? { ...block, items: [...block.items, newItem] } : block
+        )
+      )
+      setNewItemContent({ ...newItemContent, [blockId]: '' })
+      setMessage('✅ Пункт добавлен')
+      setTimeout(() => setMessage(''), 2000)
+    } catch (error) {
+      console.error('Error adding item:', error)
+      setMessage('❌ Ошибка при добавлении пункта')
+    }
+  }
+
+  const deleteItem = async (blockId: number, itemId: number) => {
+    try {
+      await fetch(`/api/profile/items?id=${itemId}`, { method: 'DELETE' })
+      setBlocks(
+        blocks.map((block) =>
+          block.id === blockId ? { ...block, items: block.items.filter((i) => i.id !== itemId) } : block
+        )
+      )
+      setMessage('✅ Пункт удален')
+      setTimeout(() => setMessage(''), 2000)
+    } catch (error) {
+      console.error('Error deleting item:', error)
+      setMessage('❌ Ошибка при удалении пункта')
     }
   }
 
@@ -300,6 +408,88 @@ export default function ProfilePage() {
                   rows={3}
                 />
               </label>
+            </div>
+          </div>
+
+          {/* Пользовательские блоки */}
+          <div>
+            <div className="flex items-center justify-between mb-4 border-b pb-2">
+              <h2 className="text-xl font-semibold text-gray-800">Дополнительные блоки</h2>
+            </div>
+
+            {/* Форма добавления нового блока */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newBlockTitle}
+                  onChange={(e) => setNewBlockTitle(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addBlock()}
+                  className="input flex-1"
+                  placeholder="Название нового блока (например: Навыки, Достижения)"
+                />
+                <button onClick={addBlock} className="btn-primary whitespace-nowrap">
+                  + Добавить блок
+                </button>
+              </div>
+            </div>
+
+            {/* Список блоков */}
+            <div className="space-y-6">
+              {blocks.map((block) => (
+                <div key={block.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-800">{block.title}</h3>
+                    <button
+                      onClick={() => deleteBlock(block.id)}
+                      className="text-red-600 hover:text-red-800 text-sm font-medium"
+                    >
+                      Удалить блок
+                    </button>
+                  </div>
+
+                  {/* Пункты блока */}
+                  <div className="space-y-2 mb-3">
+                    {block.items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded"
+                      >
+                        <span className="text-gray-700">{item.content}</span>
+                        <button
+                          onClick={() => deleteItem(block.id, item.id)}
+                          className="text-red-500 hover:text-red-700 text-sm ml-2"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Форма добавления пункта */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newItemContent[block.id] || ''}
+                      onChange={(e) =>
+                        setNewItemContent({ ...newItemContent, [block.id]: e.target.value })
+                      }
+                      onKeyPress={(e) => e.key === 'Enter' && addItem(block.id)}
+                      className="input flex-1 text-sm"
+                      placeholder="Добавить пункт..."
+                    />
+                    <button onClick={() => addItem(block.id)} className="btn-primary text-sm">
+                      + Добавить
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {blocks.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  Нет дополнительных блоков. Создайте первый блок выше.
+                </div>
+              )}
             </div>
           </div>
         </div>
