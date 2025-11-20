@@ -29,6 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <Link href="/daily" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                       Планирование
                     </Link>
+                    <Link href="/reports" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
+                      Отчеты
+                    </Link>
                     <Link href="/history" className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium">
                       История
                     </Link>

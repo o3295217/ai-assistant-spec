@@ -119,3 +119,25 @@ model ProfileItem {
 
   @@map("profile_items")
 }
+
+model PeriodReport {
+  id              Int      @id @default(autoincrement())
+  periodType      String   // 'week', 'month', 'quarter', 'custom'
+  startDate       DateTime
+  endDate         DateTime
+  daysCount       Int      // количество дней в периоде
+  daysEvaluated   Int      // сколько дней было оценено
+  avgOverallScore Float?   // средняя общая оценка
+  avgStrategyScore Float?
+  avgOperationsScore Float?
+  avgTeamScore Float?
+  avgEfficiencyScore Float?
+  aiSummary       String   // AI-анализ периода
+  aiAchievements  String   // достижения периода
+  aiChallenges    String   // проблемы и вызовы
+  aiRecommendations String // рекомендации на следующий период
+  trends          String?  // JSON с трендами по метрикам
+  createdAt       DateTime @default(now())
+
+  @@map("period_reports")
+}
