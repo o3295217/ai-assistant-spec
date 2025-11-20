@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model DreamGoal {
+  id        Int      @id @default(autoincrement())
+  goalText  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dream_goal")
+}
+
+model PeriodGoal {
+  id          Int      @id @default(autoincrement())
+  periodType  String   // 'year', 'half_year', 'quarter', 'month', 'week'
+  periodStart DateTime
+  periodEnd   DateTime
+  goalsJson   String   // JSON array of goals
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("period_goals")
+}
+
+model DailyEntry {
+  id         Int          @id @default(autoincrement())
+  date       DateTime     @unique
+  planText   String?
+  factText   String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  evaluation Evaluation?
+
+  @@map("daily_entries")
+}
+
+model Evaluation {
+  id                   Int        @id @default(autoincrement())
+  dailyEntryId         Int        @unique
+  dailyEntry           DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+  strategyScore        Int
+  operationsScore      Int
+  teamScore            Int
+  efficiencyScore      Int
+  overallScore         Float
+  feedbackText         String
+  planVsFactText       String
+  alignmentDayWeek     String
+  alignmentWeekMonth   String
+  alignmentMonthQuarter String
+  alignmentQuarterHalf String
+  alignmentHalfYear    String
+  alignmentYearDream   String
+  recommendationsText  String
+  createdAt            DateTime   @default(now())
+
+  @@map("evaluations")
+}
+
+model OpenTask {
+  id         Int       @id @default(autoincrement())
+  taskText   String
+  taskType   String    // 'strategic' or 'operational'
+  originDate DateTime
+  isClosed   Boolean   @default(false)
+  closedAt   DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("open_tasks")
+}
+
+model UserProfile {
+  id             Int      @id @default(autoincrement())
+  name           String?  // Имя
+  occupation     String?  // Работа/должность
+  industry       String?  // Вид деятельности
+  maritalStatus  String?  // Семейное положение
+  hobbies        String?  // Хобби
+  sports         String?  // Спорт
+  location       String?  // Где живу
+  age            Int?     // Возраст
+  education      String?  // Образование
+  teamSize       Int?     // Размер команды
+  workExperience String?  // Опыт работы
+  values         String?  // Ценности
+  challenges     String?  // Текущие вызовы
+  other          String?  // Другая информация
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("user_profile")
+}
+
+model ProfileBlock {
+  id        Int            @id @default(autoincrement())
+  title     String         // Название блока (например: "Личные интересы", "Навыки")
+  order     Int            @default(0) // Порядок отображения
+  items     ProfileItem[]  // Пункты внутри блока
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@map("profile_blocks")
+}
+
+model ProfileItem {
+  id        Int          @id @default(autoincrement())
+  blockId   Int          // Связь с блоком
+  block     ProfileBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  content   String       // Содержимое пункта (например: "Бег", "Фотография")
+  order     Int          @default(0) // Порядок внутри блока
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("profile_items")
+}
