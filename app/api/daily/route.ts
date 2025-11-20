@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { date, planText, factText } = body
+    const { date, planText, factText, contextText } = body
 
     if (!date) {
       return NextResponse.json({ error: 'date is required' }, { status: 400 })
@@ -59,11 +59,13 @@ export async function POST(request: NextRequest) {
       update: {
         ...(planText !== undefined && { planText }),
         ...(factText !== undefined && { factText }),
+        ...(contextText !== undefined && { contextText }),
       },
       create: {
         date: entryDate,
         planText: planText || '',
         factText: factText || '',
+        contextText: contextText || '',
       },
       include: { evaluation: true },
     })

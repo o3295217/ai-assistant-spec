@@ -11,6 +11,7 @@ export default function DailyPage() {
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [planText, setPlanText] = useState('')
   const [factText, setFactText] = useState('')
+  const [contextText, setContextText] = useState('')  // Новое поле
   const [weekGoals, setWeekGoals] = useState<string[]>([])
   const [monthGoals, setMonthGoals] = useState<string[]>([])
   const [dailyEntry, setDailyEntry] = useState<any>(null)
@@ -32,10 +33,12 @@ export default function DailyPage() {
         setDailyEntry(daily)
         setPlanText(daily.planText || '')
         setFactText(daily.factText || '')
+        setContextText(daily.contextText || '')
       } else {
         setDailyEntry(null)
         setPlanText('')
         setFactText('')
+        setContextText('')
       }
 
       // Load week goals
@@ -101,6 +104,32 @@ export default function DailyPage() {
       setTimeout(() => setMessage(''), 3000)
     } catch (error) {
       console.error('Error saving fact:', error)
+      setMessage('❌ Ошибка при сохранении')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveContext = async () => {
+    setSaving(true)
+    setMessage('')
+
+    try {
+      const res = await fetch('/api/daily', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: selectedDate,
+          contextText,
+        }),
+      })
+
+      const data = await res.json()
+      setDailyEntry(data)
+      setMessage('✅ Контекст дня сохранен!')
+      setTimeout(() => setMessage(''), 3000)
+    } catch (error) {
+      console.error('Error saving context:', error)
       setMessage('❌ Ошибка при сохранении')
     } finally {
       setSaving(false)
@@ -219,6 +248,25 @@ export default function DailyPage() {
         />
         <button onClick={saveFact} disabled={saving} className="btn-primary mt-4 disabled:opacity-50">
           {saving ? 'Сохранение...' : 'Сохранить факт'}
+        </button>
+      </div>
+
+      {/* Context */}
+      <div className="card bg-amber-50 border border-amber-200">
+        <h2 className="text-xl font-bold mb-2 text-amber-900">🌍 Контекст дня / Окружающий мир</h2>
+        <p className="text-sm text-amber-700 mb-4">
+          События, наблюдения, мысли, инсайты. Всё, что косвенно влияет на путь к мечте: изменения вокруг,
+          отношения, здоровье, сны, прочитанные книги, случайные встречи.
+        </p>
+        <textarea
+          value={contextText}
+          onChange={(e) => setContextText(e.target.value)}
+          className="textarea bg-white"
+          placeholder="Например:&#10;- Газификацию в районе начали, дом можно будет продать дороже&#10;- Конфликт с женой, нет настроения работать&#10;- Прочитал книгу про делегирование, появилась идея&#10;- Встретил старого друга, предложил сотрудничество&#10;- Плохо спал, приснился странный сон про бизнес"
+          rows={6}
+        />
+        <button onClick={saveContext} disabled={saving} className="btn-primary mt-4 disabled:opacity-50 bg-amber-600 hover:bg-amber-700">
+          {saving ? 'Сохранение...' : 'Сохранить контекст'}
         </button>
       </div>
 
