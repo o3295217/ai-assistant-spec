@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from 'react'
 
+interface CustomInterest {
+  label: string
+  value: string
+}
+
 interface ProfileData {
   name: string
   occupation: string
@@ -55,11 +60,13 @@ export default function ProfilePage() {
     other: '',
   })
   const [blocks, setBlocks] = useState<ProfileBlock[]>([])
+  const [customInterests, setCustomInterests] = useState<CustomInterest[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [newBlockTitle, setNewBlockTitle] = useState('')
   const [newItemContent, setNewItemContent] = useState<{ [blockId: number]: string }>({})
+  const [newInterestLabel, setNewInterestLabel] = useState('')
 
   useEffect(() => {
     loadProfile()
@@ -87,6 +94,16 @@ export default function ProfilePage() {
           challenges: data.challenges || '',
           other: data.other || '',
         })
+
+        // Загружаем customInterests из JSON
+        if (data.customInterests) {
+          try {
+            setCustomInterests(JSON.parse(data.customInterests))
+          } catch (e) {
+            console.error('Error parsing customInterests:', e)
+            setCustomInterests([])
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading profile:', error)
@@ -181,6 +198,28 @@ export default function ProfilePage() {
     }
   }
 
+  const addCustomInterest = () => {
+    if (!newInterestLabel.trim()) return
+
+    const newInterest: CustomInterest = {
+      label: newInterestLabel,
+      value: '',
+    }
+
+    setCustomInterests([...customInterests, newInterest])
+    setNewInterestLabel('')
+  }
+
+  const updateCustomInterest = (index: number, value: string) => {
+    const updated = [...customInterests]
+    updated[index].value = value
+    setCustomInterests(updated)
+  }
+
+  const deleteCustomInterest = (index: number) => {
+    setCustomInterests(customInterests.filter((_, i) => i !== index))
+  }
+
   const handleChange = (field: keyof ProfileData, value: string) => {
     setProfile((prev) => ({ ...prev, [field]: value }))
   }
@@ -194,6 +233,7 @@ export default function ProfilePage() {
         ...profile,
         age: profile.age ? parseInt(profile.age) : null,
         teamSize: profile.teamSize ? parseInt(profile.teamSize) : null,
+        customInterests: JSON.stringify(customInterests),
       }
 
       await fetch('/api/profile', {
@@ -369,6 +409,46 @@ export default function ProfilePage() {
                   placeholder="Например: бег, плавание, йога, футбол"
                 />
               </label>
+
+              {/* Дополнительные поля */}
+              {customInterests.map((interest, index) => (
+                <label key={index} className="block">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-700 font-medium">{interest.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => deleteCustomInterest(index)}
+                      className="text-red-500 hover:text-red-700 text-sm"
+                    >
+                      Удалить
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={interest.value}
+                    onChange={(e) => updateCustomInterest(index, e.target.value)}
+                    className="input"
+                    placeholder={`Введите ${interest.label.toLowerCase()}`}
+                  />
+                </label>
+              ))}
+
+              {/* Форма добавления нового поля */}
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newInterestLabel}
+                    onChange={(e) => setNewInterestLabel(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && addCustomInterest()}
+                    className="input flex-1"
+                    placeholder="Название нового раздела (например: Музыка, Книги)"
+                  />
+                  <button onClick={addCustomInterest} className="btn-primary whitespace-nowrap">
+                    + Добавить раздел
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

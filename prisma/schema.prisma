@@ -83,6 +83,7 @@ model UserProfile {
   maritalStatus  String?  // Семейное положение
   hobbies        String?  // Хобби
   sports         String?  // Спорт
+  customInterests String? // Дополнительные интересы (JSON array)
   location       String?  // Где живу
   age            Int?     // Возраст
   education      String?  // Образование
