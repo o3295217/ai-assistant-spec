@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Превью: Динамические поля в профиле</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background: #f9fafb;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .input {
+            width: 100%;
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            ring: 2px;
+            ring-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .card {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+        }
+        .delete-btn {
+            color: #ef4444;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .delete-btn:hover {
+            color: #dc2626;
+        }
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Заголовок -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold mb-2">Превью: Динамические поля профиля</h1>
+            <p class="text-gray-600">
+                Демонстрация новой функции добавления пользовательских разделов в блок "Личные интересы"
+            </p>
+        </div>
+
+        <!-- Сообщение об успехе -->
+        <div id="success-message" class="success-message" style="display: none;">
+            ✅ Раздел добавлен!
+        </div>
+
+        <!-- Карточка профиля -->
+        <div class="card">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
+                    Личные интересы
+                </h2>
+
+                <div class="space-y-4">
+                    <!-- Хобби (фиксированное поле) -->
+                    <label class="block">
+                        <span class="text-gray-700 font-medium mb-2 block">Хобби</span>
+                        <input
+                            type="text"
+                            class="input"
+                            placeholder="Например: чтение, музыка, путешествия, фотография"
+                            value="программирование, фотография"
+                        />
+                    </label>
+
+                    <!-- Спорт (фиксированное поле) -->
+                    <label class="block">
+                        <span class="text-gray-700 font-medium mb-2 block">Спорт</span>
+                        <input
+                            type="text"
+                            class="input"
+                            placeholder="Например: бег, плавание, йога, футбол"
+                            value="бег, велосипед"
+                        />
+                    </label>
+
+                    <!-- Динамические поля -->
+                    <div id="custom-fields" class="space-y-4">
+                        <!-- Музыка -->
+                        <label class="block">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-gray-700 font-medium">Музыка</span>
+                                <button class="delete-btn" onclick="deleteField(this)">
+                                    Удалить
+                                </button>
+                            </div>
+                            <input
+                                type="text"
+                                class="input"
+                                placeholder="Введите музыка"
+                                value="рок, джаз, классика"
+                            />
+                        </label>
+
+                        <!-- Книги -->
+                        <label class="block">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-gray-700 font-medium">Книги</span>
+                                <button class="delete-btn" onclick="deleteField(this)">
+                                    Удалить
+                                </button>
+                            </div>
+                            <input
+                                type="text"
+                                class="input"
+                                placeholder="Введите книги"
+                                value="фантастика, детективы"
+                            />
+                        </label>
+                    </div>
+
+                    <!-- Форма добавления нового раздела -->
+                    <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="flex gap-2">
+                            <input
+                                id="new-field-label"
+                                type="text"
+                                class="input flex-1"
+                                placeholder="Название нового раздела (например: Музыка, Книги)"
+                                onkeypress="if(event.key==='Enter') addField()"
+                            />
+                            <button onclick="addField()" class="btn-primary">
+                                + Добавить раздел
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Кнопка сохранения -->
+            <div class="mt-6 border-t pt-6">
+                <button class="btn-primary" onclick="saveProfile()">
+                    Сохранить профиль
+                </button>
+            </div>
+        </div>
+
+        <!-- Инструкция -->
+        <div class="card mt-6 bg-blue-50 border border-blue-200">
+            <h3 class="font-semibold text-blue-900 mb-2">💡 Как использовать</h3>
+            <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                <li>Введите название нового раздела в поле ниже (например: "Кино", "Путешествия")</li>
+                <li>Нажмите "+ Добавить раздел" или клавишу Enter</li>
+                <li>Появится новое текстовое поле для ввода данных</li>
+                <li>Заполните поле и нажмите "Сохранить профиль"</li>
+                <li>Чтобы удалить раздел, нажмите кнопку "Удалить" справа от названия</li>
+            </ol>
+        </div>
+
+        <!-- Примеры -->
+        <div class="card mt-6">
+            <h3 class="font-semibold text-gray-900 mb-3">📝 Примеры разделов</h3>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <button onclick="quickAdd('Музыка')" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm transition">
+                    Музыка
+                </button>
+                <button onclick="quickAdd('Кино')" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm transition">
+                    Кино
+                </button>
+                <button onclick="quickAdd('Путешествия')" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm transition">
+                    Путешествия
+                </button>
+                <button onclick="quickAdd('Кулинария')" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm transition">
+                    Кулинария
+                </button>
+                <button onclick="quickAdd('Языки')" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm transition">
+                    Языки
+                </button>
+                <button onclick="quickAdd('Технологии')" class="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm transition">
+                    Технологии
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function addField() {
+            const input = document.getElementById('new-field-label');
+            const label = input.value.trim();
+
+            if (!label) {
+                alert('Введите название раздела');
+                return;
+            }
+
+            const container = document.getElementById('custom-fields');
+
+            const fieldHTML = `
+                <label class="block">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-gray-700 font-medium">${label}</span>
+                        <button class="delete-btn" onclick="deleteField(this)">
+                            Удалить
+                        </button>
+                    </div>
+                    <input
+                        type="text"
+                        class="input"
+                        placeholder="Введите ${label.toLowerCase()}"
+                    />
+                </label>
+            `;
+
+            container.insertAdjacentHTML('beforeend', fieldHTML);
+            input.value = '';
+
+            // Показываем сообщение об успехе
+            const message = document.getElementById('success-message');
+            message.style.display = 'block';
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 2000);
+        }
+
+        function deleteField(button) {
+            const field = button.closest('label');
+            field.style.transition = 'opacity 0.3s';
+            field.style.opacity = '0';
+            setTimeout(() => field.remove(), 300);
+        }
+
+        function quickAdd(label) {
+            const input = document.getElementById('new-field-label');
+            input.value = label;
+            addField();
+        }
+
+        function saveProfile() {
+            alert('✅ Профиль сохранён!\n\nВ реальном приложении данные будут отправлены на сервер.');
+        }
+    </script>
+</body>
+</html>
